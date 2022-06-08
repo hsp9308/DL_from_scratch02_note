@@ -167,9 +167,11 @@ class TimeAffine:
         N, T, D = x.shape
         W, b = self.params
 
+        # Reshaping x to rx:  to perform matrix product of rx*W
         rx = x.reshape(N*T, -1)
         out = np.dot(rx, W) + b
         self.x = x
+        # Re-reshaping it
         return out.reshape(N, T, -1)
 
     def backward(self, dout):
@@ -226,7 +228,7 @@ class TimeSoftmaxWithLoss:
         dx[np.arange(N * T), ts] -= 1
         dx *= dout
         dx /= mask.sum()
-        dx *= mask[:, np.newaxis]  # ignore_labelㅇㅔ 해당하는 데이터는 기울기를 0으로 설정
+        dx *= mask[:, np.newaxis]  # ignore_label에 해당하는 데이터는 기울기를 0으로 설정
 
         dx = dx.reshape((N, T, V))
 
