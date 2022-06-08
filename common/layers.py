@@ -1,4 +1,5 @@
-import numpy as np
+from common.np import *
+from common.config import GPU
 import sys
 sys.path.append("..")
 from common.functions import softmax, cross_entropy
@@ -81,7 +82,12 @@ class Embedding:
     def backward(self, dout):
         dW, = self.grads
         dW[...] = 0
-        np.add.at(dW, self.idx, dout) # 중복문제 해결을 위해 해당 행에 할당이 아닌 더하기. dout를 dW의 idx번째 행에 더해줌
+        if GPU:
+            import cupyx
+            cupyx.scatter_add(dW,self.idx,dout)
+        else:
+            np.add.at(dW,self.idx,dout)
+#        np.add.at(dW, self.idx, dout) # 중복문제 해결을 위해 해당 행에 할당이 아닌 더하기. dout를 dW의 idx번째 행에 더해줌
         # 아래와 동일한 연산을 수행함.
         # for i, word_id in enumerate(self.idx):
         #   dW[word_id] += dout[i]
@@ -156,7 +162,7 @@ class SigmoidWithLoss:
         self.t = t
         self.y = 1 / (1 + np.exp(-x))
 
-        self.loss = cross_entropy(self.y, self.t)
+        self.loss = cross_entropy(np.c_[1 - self.y, self.y], self.t)
         return self.loss
 
     def backward(self, dout=1):

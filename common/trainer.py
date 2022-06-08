@@ -1,7 +1,8 @@
 import sys
-sys.path.append("../")
+sys.path.append("..")
+import numpy
 import time
-import numpy as np
+from common.np import *
 import matplotlib.pyplot as plt
 
 
@@ -54,7 +55,7 @@ class Trainer:
             self.current_epoch += 1
 
     def plot(self, ylim=None):
-        x = np.arange(len(self.loss_list))
+        x = numpy.arange(len(self.loss_list))
         if ylim is not None:
             plt.ylim(*ylim)
         plt.plot(x, self.loss_list, label='train')
