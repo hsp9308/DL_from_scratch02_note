@@ -1,10 +1,11 @@
+from common.np import *
+import os
 import sys
 sys.path.append('..')
-import os
-from common.np import *
+
 
 def preprocess(text):
-    text = text.lower()    
+    text = text.lower()
     text = text.replace('.', ' .')
     words = text.split(' ')
     word_to_id = {}
@@ -20,9 +21,10 @@ def preprocess(text):
 
     return corpus, word_to_id, id_to_word
 
+
 def create_co_matrix(corpus, vocab_size, window_size=1):
     corpus_size = len(corpus)
-    co_matrix =  np.zeros((corpus_size,corpus_size), dtype=np.int32)
+    co_matrix = np.zeros((corpus_size, corpus_size), dtype=np.int32)
 
     for ind, word_id in enumerate(corpus):
         for i in range(1, window_size+1):
@@ -34,42 +36,45 @@ def create_co_matrix(corpus, vocab_size, window_size=1):
                 co_matrix[word_id, left_word_id] += 1
             if right_ind < corpus_size:
                 right_word_id = corpus[right_ind]
-                co_matrix[word_id,right_word_id] += 1
-        
+                co_matrix[word_id, right_word_id] += 1
+
     return co_matrix
+
 
 def cos_similarity(x, y, eps=1e-8):
     nx = x / np.sqrt(np.sum(x**2) + eps)
     ny = y / np.sqrt(np.sum(y**2) + eps)
 
-    return np.dot(nx,ny)
+    return np.dot(nx, ny)
+
 
 def most_similar(query, word_to_id, id_to_word, word_matrix, top=5):
     if query not in word_to_id:
-        print("no word %s found." % query )
+        print("no word %s found." % query)
         return
-    
+
     print('\n[query] ' + query)
     query_id = word_to_id[query]
     # query word에 해당하는 행 (= vector) 가져오기
     query_vec = word_matrix[query_id]
-    
+
     # Cosine similarity
     vocab_size = len(id_to_word)
     similarity = np.zeros(vocab_size)
     for i in range(vocab_size):
         similarity[i] = cos_similarity(word_matrix[i], query_vec)
-    
+
     # top 값 만큼 상위 단어들을 출력
     count = 0
     for i in (-1 * similarity).argsort():
         if id_to_word[i] == query:
             continue
-        print('%s: %s'%(id_to_word[i], similarity[i]))
+        print('%s: %s' % (id_to_word[i], similarity[i]))
 
         count += 1
         if count >= top:
             return
+
 
 def ppmi(C, verbose=False, eps=1e-8):
     M = np.zeros_like(C, dtype=np.float32)
@@ -80,8 +85,8 @@ def ppmi(C, verbose=False, eps=1e-8):
 
     for i in range(C.shape[0]):
         for j in range(C.shape[1]):
-            pmi = np.log2(C[i,j] * N / (S[j]*S[i]) +eps)
-            M[i,j] = max(0,pmi)
+            pmi = np.log2(C[i, j] * N / (S[j]*S[i]) + eps)
+            M[i, j] = max(0, pmi)
 
             if verbose:
                 cnt += 1
@@ -89,6 +94,7 @@ def ppmi(C, verbose=False, eps=1e-8):
                     print('%.1f%% 완료' % (100*cnt/total))
 
     return M
+
 
 def create_contexts_target(corpus, window_size=1):
     target = corpus[window_size:-window_size]
@@ -103,6 +109,7 @@ def create_contexts_target(corpus, window_size=1):
         contexts.append(cs)
 
     return np.array(contexts), np.array(target)
+
 
 def convert_one_hot(corpus, vocab_size):
     '''원핫 표현으로 변환
@@ -129,6 +136,7 @@ def convert_one_hot(corpus, vocab_size):
 
     return one_hot
 
+
 def to_cpu(x):
     import numpy
     if type(x) == numpy.ndarray:
@@ -154,14 +162,16 @@ def analogy(a, b, c, word_to_id, id_to_word, word_matrix, top=5, answer=None):
     # In vector expression, a - c = b - d ====> d = b - a  + c
     # Example : queen = king - man + woman
     print('\n[analogy] ' + a + ':' + b + ' = ' + c + ':?')
-    a_vec, b_vec, c_vec = word_matrix[word_to_id[a]], word_matrix[word_to_id[b]], word_matrix[word_to_id[c]]
+    a_vec, b_vec, c_vec = word_matrix[word_to_id[a]
+                                      ], word_matrix[word_to_id[b]], word_matrix[word_to_id[c]]
     query_vec = b_vec - a_vec + c_vec
     query_vec = normalize(query_vec)
 
     similarity = np.dot(word_matrix, query_vec)
 
     if answer is not None:
-        print("==>" + answer + ":" + str(np.dot(word_matrix[word_to_id[answer]], query_vec)))
+        print("==>" + answer + ":" +
+              str(np.dot(word_matrix[word_to_id[answer]], query_vec)))
 
     count = 0
     for i in (-1 * similarity).argsort():
@@ -174,6 +184,7 @@ def analogy(a, b, c, word_to_id, id_to_word, word_matrix, top=5, answer=None):
         count += 1
         if count >= top:
             return
+
 
 def normalize(x):
     if x.ndim == 2:
@@ -195,3 +206,34 @@ def clip_grads(grads, max_norm):
     if rate < 1:
         for grad in grads:
             grad *= rate
+
+
+def eval_perplexity(model, corpus, batch_size=10, time_size=35):
+    print('퍼플렉서티 평가 중 ...')
+    corpus_size = len(corpus)
+    total_loss, loss_cnt = 0, 0
+    max_iters = (corpus_size - 1) // (batch_size * time_size)
+    jump = (corpus_size - 1) // batch_size
+
+    for iters in range(max_iters):
+        xs = np.zeros((batch_size, time_size), dtype=np.int32)
+        ts = np.zeros((batch_size, time_size), dtype=np.int32)
+        time_offset = iters * time_size
+        offsets = [time_offset + (i * jump) for i in range(batch_size)]
+        for t in range(time_size):
+            for i, offset in enumerate(offsets):
+                xs[i, t] = corpus[(offset + t) % corpus_size]
+                ts[i, t] = corpus[(offset + t + 1) % corpus_size]
+
+        try:
+            loss = model.forward(xs, ts, train_flg=False)
+        except TypeError:
+            loss = model.forward(xs, ts)
+        total_loss += loss
+
+        sys.stdout.write('\r%d / %d' % (iters, max_iters))
+        sys.stdout.flush()
+
+    print('')
+    ppl = np.exp(total_loss / max_iters)
+    return ppl

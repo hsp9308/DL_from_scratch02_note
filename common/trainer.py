@@ -1,9 +1,10 @@
+from common.util import clip_grads
+import matplotlib.pyplot as plt
+from common.np import *
+import time
+import numpy
 import sys
 sys.path.append("..")
-import numpy
-import time
-from common.np import *
-import matplotlib.pyplot as plt
 
 
 class Trainer:
@@ -36,7 +37,8 @@ class Trainer:
                 # 기울기 구해 매개변수 갱신
                 loss = model.forward(batch_x, batch_t)
                 model.backward()
-                params, grads = remove_duplicate(model.params, model.grads)  # 공유된 가중치를 하나로 모음
+                params, grads = remove_duplicate(
+                    model.params, model.grads)  # 공유된 가중치를 하나로 모음
                 if max_grad is not None:
                     clip_grads(grads, max_grad)
                 optimizer.update(params, grads)
@@ -85,16 +87,19 @@ def remove_duplicate(params, grads):
                     grads.pop(j)
                 # 가중치를 전치행렬로 공유하는 경우(weight tying)
                 elif params[i].ndim == 2 and params[j].ndim == 2 and \
-                     params[i].T.shape == params[j].shape and np.all(params[i].T == params[j]):
+                        params[i].T.shape == params[j].shape and np.all(params[i].T == params[j]):
                     grads[i] += grads[j].T
                     find_flg = True
                     params.pop(j)
                     grads.pop(j)
 
-                if find_flg: break
-            if find_flg: break
+                if find_flg:
+                    break
+            if find_flg:
+                break
 
-        if not find_flg: break
+        if not find_flg:
+            break
 
     return params, grads
 
@@ -114,7 +119,8 @@ class RnnlmTrainer:
 
         data_size = len(x)
         jump = data_size // batch_size
-        offsets = [i * jump for i in range(batch_size)]  # 배치에서 각 샘플을 읽기 시작하는 위치
+        # 배치에서 각 샘플을 읽기 시작하는 위치
+        offsets = [i * jump for i in range(batch_size)]
 
         for time in range(time_size):
             for i, offset in enumerate(offsets):
@@ -137,12 +143,14 @@ class RnnlmTrainer:
         start_time = time.time()
         for epoch in range(max_epoch):
             for iters in range(max_iters):
-                batch_x, batch_t = self.get_batch(xs, ts, batch_size, time_size)
+                batch_x, batch_t = self.get_batch(
+                    xs, ts, batch_size, time_size)
 
                 # 기울기를 구해 매개변수 갱신
                 loss = model.forward(batch_x, batch_t)
                 model.backward()
-                params, grads = remove_duplicate(model.params, model.grads)  # 공유된 가중치를 하나로 모음
+                params, grads = remove_duplicate(
+                    model.params, model.grads)  # 공유된 가중치를 하나로 모음
                 if max_grad is not None:
                     clip_grads(grads, max_grad)
                 optimizer.update(params, grads)
