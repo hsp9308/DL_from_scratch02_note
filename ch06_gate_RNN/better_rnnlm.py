@@ -59,8 +59,8 @@ class BetterRnnlm(BaseModel):
             xs = layer.forward(xs)
         return xs
 
-    def forward(self, xs, ts):
-        scroe = self.predict(xs)  # 1권에서처럼, predict를 구현하여, 해당 메소드의 코드 일부를 대체함.
+    def forward(self, xs, ts, train_flg=True):
+        scroe = self.predict(xs, train_flg)  # 1권에서처럼, predict를 구현하여, 해당 메소드의 코드 일부를 대체함.
         loss = self.loss_layer.forward(scroe, ts)
         return loss
 

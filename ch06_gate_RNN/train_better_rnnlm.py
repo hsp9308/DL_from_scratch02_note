@@ -1,12 +1,12 @@
+import sys
+sys.path.append('..')
+from common import config
+config.GPU = True
 from common.optimizer import SGD
 from common.trainer import RnnlmTrainer
 from common.util import eval_perplexity
 from dataset import ptb
 from better_rnnlm import BetterRnnlm
-from common import config
-import sys
-sys.path.append('..')
-# config.GPU = True
 
 
 # hyperparameters
@@ -17,7 +17,7 @@ time_size = 35
 lr = 20.0
 max_epoch = 40
 max_grad = 0.25
-dropout - 0.5
+dropout = 0.5
 
 corpus, word_to_id, id_to_word = ptb.load_data('train')
 corpus_val, _, _ = ptb.load_data('val')
